@@ -23,7 +23,7 @@ type FileHeader struct {
 
 type Journal struct {
 	edsm       *edsm.EDSM
-	lastDate   *time.Time
+	LastDate   *time.Time
 	fileHeader *datatypes.FileHeader
 	logger     *log.Logger
 }
@@ -56,7 +56,7 @@ func NewJournal(edsm *edsm.EDSM, logger *log.Logger) *Journal {
 		// TODO: Parse the last date from the sqlite database.
 		// If there is no last date, then we need to start from the beginning and define it as nil.
 		edsm:       edsm,
-		lastDate:   lastDate,
+		LastDate:   lastDate,
 		fileHeader: nil,
 		logger:     logger,
 	}
@@ -101,8 +101,8 @@ func (j *Journal) ParseJournal(journalPath string) error {
 }
 
 func (j *Journal) storeLastDate(timestamp time.Time) {
-	if j.lastDate == nil || j.lastDate.Before(timestamp) {
-		j.lastDate = &timestamp
+	if j.LastDate == nil || j.LastDate.Before(timestamp) {
+		j.LastDate = &timestamp
 		file, err := os.OpenFile("latest.txt", os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0755)
 		if err != nil {
 			j.logger.Printf("Error opening latest.txt: %s", err)
@@ -145,8 +145,8 @@ func (j *Journal) parseLine(line string) error {
 	if err != nil {
 		return errors.WithStack(err)
 	}
-	if j.lastDate != nil {
-		lastDate, err := time.Parse(time.RFC3339, j.lastDate.Format(time.RFC3339))
+	if j.LastDate != nil {
+		lastDate, err := time.Parse(time.RFC3339, j.LastDate.Format(time.RFC3339))
 		if err != nil {
 			return errors.WithStack(err)
 		}

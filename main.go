@@ -14,6 +14,11 @@ import (
 	"github.com/pkg/errors"
 )
 
+type JournalFile struct {
+	path string
+	date time.Time
+}
+
 func main() {
 	// Take as a first positional argument the path to the folder where the journal files are located.
 	// Take as a second positional argument the commander name.
@@ -29,7 +34,7 @@ func main() {
 	edsm := edsm.NewEDSM(commanderName, apiKey, logger)
 
 	// Find all the journal files in the folder and parse them after sorting them by date.
-	files := make(map[string]string)
+	files := make(map[string]JournalFile)
 	err := filepath.WalkDir(jounnalPath, func(path string, d os.DirEntry, err error) error {
 		if err != nil {
 			return errors.WithStack(err)
@@ -42,8 +47,15 @@ func main() {
 			if d.Name()[:8] == "Journal." {
 				name := d.Name()
 				parts := strings.Split(name, ".")
-				date := parts[1]
-				files[date] = path
+				date := parts[1] + "." + parts[2]
+				parsedDate, err := time.Parse("2006-01-02T150405.00", date)
+				if err != nil {
+					return errors.WithStack(err)
+				}
+				files[date] = JournalFile{
+					path: path,
+					date: parsedDate,
+				}
 			}
 
 		}
@@ -63,7 +75,15 @@ func main() {
 	journal_obj := journal.NewJournal(edsm, logger)
 	for _, k := range keys {
 		// Parse the journal file.
-		err := journal_obj.ParseJournal(files[k])
+		// Parse date of the journal file and ignore if older than journal_obj.lastDate.
+
+		currentDate := *journal_obj.LastDate
+		startOfDay := Bod(currentDate)
+		if journal_obj.LastDate != nil && files[k].date.Before(startOfDay) {
+			continue
+		}
+
+		err := journal_obj.ParseJournal(files[k].path)
 		if err != nil {
 			logger.Fatalf("Error parsing journal file: %+v", err)
 		}
@@ -72,4 +92,8 @@ func main() {
 	}
 
 	logger.Println("Done parsing journal files.")
+}
+
+func Bod(t time.Time) time.Time {
+	return time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, t.Location())
 }
