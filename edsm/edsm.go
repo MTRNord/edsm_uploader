@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"encoding/json"
 	"io"
+	"log"
+	"os"
 
 	"github.com/MTRNord/edsm_uploader/datatypes"
 	"github.com/hashicorp/go-retryablehttp"
@@ -14,14 +16,17 @@ type EDSM struct {
 	commanderName string
 	apiKey        string
 	client        *retryablehttp.Client
+	logger        *log.Logger
 }
 
-func NewEDSM(commanderName string, apiKey string) *EDSM {
+func NewEDSM(commanderName string, apiKey string, logger *log.Logger) *EDSM {
 	retryClient := retryablehttp.NewClient()
 	retryClient.RetryMax = 10
+	retryClient.Logger = log.New(os.Stderr, "retryablehttp: ", log.LstdFlags)
 	return &EDSM{
 		commanderName: commanderName,
 		apiKey:        apiKey,
+		logger:        logger,
 		client:        retryClient,
 	}
 }
@@ -80,7 +85,7 @@ func (e *EDSM) SendJournalLine(fileHeader *datatypes.FileHeader, journalLine str
 			return errors.WithStack(err)
 		}
 		bodyString := string(bodyBytes)
-		log.Printf("Response from EDSM: %s", bodyString)
+		e.logger.Printf("Response from EDSM: %s", bodyString)
 	} */
 
 	return nil

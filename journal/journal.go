@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"log"
 	"os"
+	"strings"
 	"sync"
 	"time"
 
@@ -24,13 +25,14 @@ type Journal struct {
 	edsm       *edsm.EDSM
 	lastDate   *time.Time
 	fileHeader *datatypes.FileHeader
+	logger     *log.Logger
 }
 
-func NewJournal(edsm *edsm.EDSM) *Journal {
+func NewJournal(edsm *edsm.EDSM, logger *log.Logger) *Journal {
 	// Read lastDate from latest.txt
 	file, err := os.OpenFile("latest.txt", os.O_RDWR|os.O_CREATE, 0755)
 	if err != nil {
-		log.Printf("Error opening latest.txt: %s", err)
+		logger.Printf("Error opening latest.txt: %s", err)
 	}
 	defer file.Close()
 	scanner := bufio.NewScanner(file)
@@ -44,7 +46,7 @@ func NewJournal(edsm *edsm.EDSM) *Journal {
 		} else {
 			lastDateL, err := time.Parse(time.RFC3339, text)
 			if err != nil {
-				log.Printf("Error parsing latest.txt: %s", err)
+				logger.Printf("Error parsing latest.txt: %s", err)
 			}
 			lastDate = &lastDateL
 		}
@@ -56,11 +58,13 @@ func NewJournal(edsm *edsm.EDSM) *Journal {
 		edsm:       edsm,
 		lastDate:   lastDate,
 		fileHeader: nil,
+		logger:     logger,
 	}
 }
 
 func (j *Journal) ParseJournal(journalPath string) error {
-	log.Printf("Parsing journal file: %s", journalPath)
+	splitPath := strings.Split(journalPath, "/")
+	j.logger.Printf("Parsing journal file: %s", splitPath[len(splitPath)-1])
 	file, err := os.Open(journalPath)
 	if err != nil {
 		return errors.WithStack(err)
@@ -101,12 +105,12 @@ func (j *Journal) storeLastDate(timestamp time.Time) {
 		j.lastDate = &timestamp
 		file, err := os.OpenFile("latest.txt", os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0755)
 		if err != nil {
-			log.Printf("Error opening latest.txt: %s", err)
+			j.logger.Printf("Error opening latest.txt: %s", err)
 		}
 		defer file.Close()
 		_, err = file.WriteString(timestamp.Format(time.RFC3339))
 		if err != nil {
-			log.Printf("Error writing to latest.txt: %s", err)
+			j.logger.Printf("Error writing to latest.txt: %s", err)
 		}
 	}
 }

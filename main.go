@@ -19,12 +19,14 @@ func main() {
 	// Take as a second positional argument the commander name.
 	// Take as a third positional argument the EDSM API key.
 
+	logger := log.New(os.Stderr, "edsm_uploader: ", log.LstdFlags)
+
 	jounnalPath := os.Args[1]
 	commanderName := os.Args[2]
 	apiKey := os.Args[3]
 
 	// Create a new EDSM object.
-	edsm := edsm.NewEDSM(commanderName, apiKey)
+	edsm := edsm.NewEDSM(commanderName, apiKey, logger)
 
 	// Find all the journal files in the folder and parse them after sorting them by date.
 	files := make(map[string]string)
@@ -48,7 +50,7 @@ func main() {
 		return nil
 	})
 	if err != nil {
-		log.Fatalf("Error walking the path: %+v", err)
+		logger.Fatalf("Error walking the path: %+v", err)
 	}
 
 	// Sort the files by date.
@@ -58,16 +60,16 @@ func main() {
 	}
 	sort.Strings(keys)
 
-	journal_obj := journal.NewJournal(edsm)
+	journal_obj := journal.NewJournal(edsm, logger)
 	for _, k := range keys {
 		// Parse the journal file.
 		err := journal_obj.ParseJournal(files[k])
 		if err != nil {
-			log.Fatalf("Error parsing journal file: %+v", err)
+			logger.Fatalf("Error parsing journal file: %+v", err)
 		}
 		// sleep for 1 second to not overload the EDSM API.
 		time.Sleep(1 * time.Second)
 	}
 
-	log.Println("Done parsing journal files.")
+	logger.Println("Done parsing journal files.")
 }
